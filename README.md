@@ -12,6 +12,7 @@ A minimal NixOS configuration for the [Radxa Zero 3W](https://radxa.com/products
 - UART3 enabled on GPIO pins 3/5
 - GPU and SCMI disabled for headless operation
 - Builds flashable SD card images
+- Direct flashing to eMMC via maskrom mode
 
 ## Requirements
 
