@@ -337,4 +337,4 @@ sudo ip link set <usb-interface> up
 
 ## License
 
-MIT License - see individual files for their respective licenses.
+[MIT License](LICENSE)
