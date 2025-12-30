@@ -63,6 +63,43 @@ sudo dd if=./result/sd-image/nixos-sd-image-*.img of=/dev/sdX bs=4M status=progr
 sync
 ```
 
+**Alternative tools:**
+- **Balena Etcher** - GUI tool, works on all platforms
+- **GNOME Disks** - Right-click image → "Restore Disk Image"
+- **Raspberry Pi Imager** - Use "custom image" option
+
+## Bootloader
+
+The Radxa Zero 3W uses U-Boot as its bootloader. There are two scenarios:
+
+### Factory U-Boot in SPI flash (most common)
+
+If your board came with Radxa's official U-Boot in SPI flash, you're all set. The NixOS SD image uses extlinux configuration which U-Boot will automatically detect and boot.
+
+Just flash the image and boot - no additional bootloader steps needed.
+
+### No bootloader / custom U-Boot
+
+If your SPI flash is empty or you want U-Boot on the SD card:
+
+1. **Download Radxa's U-Boot** from their [releases](https://github.com/radxa/u-boot/releases) or use their official images
+
+2. **Flash U-Boot to SD card** (before the first partition):
+   ```bash
+   # Download u-boot (example - check for latest)
+   wget https://github.com/radxa/u-boot/releases/download/latest/zero3_u-boot.bin
+
+   # Flash to SD card (after flashing NixOS image)
+   sudo dd if=zero3_u-boot.bin of=/dev/sdX seek=64 bs=512 conv=notrunc
+   sync
+   ```
+
+3. **Or flash to SPI** (permanent, survives SD card changes):
+   - Boot any Linux from SD card
+   - Use Radxa's `rsetup` tool or `flashcp` to write U-Boot to SPI
+
+**Note:** The exact U-Boot binary and offset may vary. Check [Radxa's documentation](https://docs.radxa.com/en/zero/zero3) for your specific board revision.
+
 ### 5. Boot and connect
 
 Insert the SD card and power on. Connect via:
@@ -80,19 +117,86 @@ ssh root@10.0.0.2
 
 Default password: `nixos` (change this!)
 
-## Building on x86_64
+## Building from x86_64
 
-If you don't have a native aarch64 machine, you can use:
+If you're on an x86_64 machine, you have several options:
 
-1. **QEMU binfmt** (easiest):
-   ```bash
-   # On NixOS, add to configuration.nix:
-   boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
-   ```
+### Option 1: QEMU binfmt emulation (recommended)
 
-2. **Remote builder**: Configure a remote aarch64 machine in your Nix config.
+This transparently emulates aarch64 binaries. Slow but works out of the box.
 
-3. **Cross-compilation**: Modify the flake to use cross-compilation (more complex).
+**On NixOS**, add to your system configuration:
+```nix
+boot.binfmt.emulatedSystems = [ "aarch64-linux" ];
+```
+
+**On other distros** (Debian/Ubuntu):
+```bash
+sudo apt install qemu-user-static binfmt-support
+sudo systemctl restart binfmt-support
+```
+
+Then build normally:
+```bash
+nix build .#sdImage --system aarch64-linux
+```
+
+### Option 2: Cross-compilation (faster)
+
+Modify `flake.nix` to cross-compile from x86_64:
+
+```nix
+{
+  description = "NixOS on Radxa Zero 3W with WiFi support";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
+    nixos-generators = {
+      url = "github:nix-community/nixos-generators";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+  };
+
+  outputs = { self, nixpkgs, nixos-generators }:
+    let
+      # Build on x86_64, target aarch64
+      pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        crossSystem.config = "aarch64-unknown-linux-gnu";
+      };
+    in
+    {
+      packages.x86_64-linux.sdImage = nixos-generators.nixosGenerate {
+        pkgs = pkgs;
+        format = "sd-aarch64";
+        modules = [
+          ./configuration.nix
+          { sdImage.compressImage = false; }
+        ];
+      };
+
+      packages.x86_64-linux.default = self.packages.x86_64-linux.sdImage;
+    };
+}
+```
+
+Then build:
+```bash
+nix build .#sdImage
+```
+
+**Note:** Cross-compilation may fail for some packages that don't support it. QEMU binfmt is more reliable.
+
+### Option 3: Remote aarch64 builder
+
+If you have access to an ARM64 machine (Raspberry Pi 4, cloud instance, etc.):
+
+```bash
+# In ~/.config/nix/nix.conf or /etc/nix/nix.conf
+builders = ssh://user@arm64-host aarch64-linux
+```
+
+Then Nix will automatically offload aarch64 builds to the remote machine.
 
 ## File Structure
 
