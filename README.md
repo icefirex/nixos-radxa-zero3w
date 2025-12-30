@@ -1,5 +1,7 @@
 # NixOS on Radxa Zero 3W
 
+![Radxa Zero 3W](https://docs.radxa.com/en/assets/images/radxa_zero_3w-84a1e0f01c8381ff1a202d4322f9ed17.webp)
+
 A minimal NixOS configuration for the [Radxa Zero 3W](https://radxa.com/products/zeros/zero3w/) single-board computer with working WiFi support.
 
 ## Features
