@@ -1,0 +1,16 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "radxa,zero-3w", "rockchip,rk3566";
+
+	/* Enable UART3 on pins 3/5 (GPIO1_A0/A1) */
+	fragment@0 {
+		target = <&uart3>;
+		__overlay__ {
+			status = "okay";
+			pinctrl-names = "default";
+			pinctrl-0 = <&uart3m0_xfer>;
+		};
+	};
+};

@@ -1,0 +1,44 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+    compatible = "radxa,zero-3w", "rockchip,rk3566";
+
+    fragment@0 {
+        target-path = "/";
+        __overlay__ {
+            sdio_pwrseq: sdio-pwrseq {
+                compatible = "mmc-pwrseq-simple";
+                pinctrl-names = "default";
+                pinctrl-0 = <&wifi_reg_on_h>;
+                reset-gpios = <&gpio0 12 1>; /* GPIO0_PC0 = GPIO0_B4 + 8 = 12, active low */
+                post-power-on-delay-ms = <200>;
+            };
+
+            wireless_wlan: wireless-wlan {
+                compatible = "wlan-platdata";
+                wifi_chip_type = "aic8800";
+                pinctrl-names = "default";
+                pinctrl-0 = <&wifi_wake_host_h>;
+                WIFI,host_wake_irq = <&gpio0 15 0>; /* GPIO0_PB7 = GPIO0_B0 + 7 = 15 */
+                status = "okay";
+            };
+        };
+    };
+
+    fragment@1 {
+        target = <&sdmmc1>;
+        __overlay__ {
+            status = "okay";
+            bus-width = <4>;
+            cap-sd-highspeed;
+            cap-sdio-irq;
+            keep-power-in-suspend;
+            non-removable;
+            mmc-pwrseq = <&sdio_pwrseq>;
+            pinctrl-names = "default";
+            pinctrl-0 = <&sdmmc1_bus4 &sdmmc1_cmd &sdmmc1_clk>;
+            sd-uhs-sdr104;
+        };
+    };
+};
