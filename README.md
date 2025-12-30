@@ -100,6 +100,75 @@ If your SPI flash is empty or you want U-Boot on the SD card:
 
 **Note:** The exact U-Boot binary and offset may vary. Check [Radxa's documentation](https://docs.radxa.com/en/zero/zero3) for your specific board revision.
 
+## Flashing to eMMC (Maskrom Mode)
+
+If your Radxa Zero 3W has eMMC storage and you want to flash directly to it (instead of using an SD card), you can use `rkdeveloptool` in maskrom mode.
+
+### Prerequisites
+
+Install `rkdeveloptool`:
+
+**On NixOS:**
+```bash
+nix-shell -p rkdeveloptool
+```
+
+**On Debian/Ubuntu:**
+```bash
+sudo apt install rkdeveloptool
+```
+
+**On Arch:**
+```bash
+yay -S rkdeveloptool
+```
+
+Download the required files:
+- **SPL Loader**: `rk3566_spl_loader_v1.xx.bin` - from [Radxa's loader repository](https://dl.radxa.com/rock3/images/loader/)
+- **NixOS image**: Built with `nix build .#sdImage`
+
+### Flashing Steps
+
+1. **Enter maskrom mode:**
+   - Locate the maskrom button (or maskrom pads) on the board
+   - Hold the maskrom button while connecting USB-C to your computer
+   - Release the button after connecting
+
+2. **Verify the device is detected:**
+   ```bash
+   sudo rkdeveloptool ld
+   ```
+   You should see something like: `DevNo=1 Vid=0x2207,Pid=0x350a,LocationID=...`
+
+3. **Download the SPL loader** (initializes DDR memory for communication):
+   ```bash
+   sudo rkdeveloptool db rk3566_spl_loader_v1.xx.bin
+   ```
+   Note: This temporarily loads the SPL into RAM - it doesn't flash anything permanently.
+
+4. **Flash the NixOS image:**
+   ```bash
+   sudo rkdeveloptool wl 0 ./result/sd-image/nixos-sd-image-*.img
+   ```
+
+5. **Reset the device:**
+   ```bash
+   sudo rkdeveloptool rd
+   ```
+
+The board will reboot from eMMC with NixOS installed.
+
+### If your board has no bootloader
+
+If your SPI flash is empty (no factory U-Boot), you'll also need to flash U-Boot to eMMC:
+
+```bash
+# After step 3 (db), before flashing NixOS image:
+sudo rkdeveloptool wl 64 u-boot.img
+```
+
+Get `u-boot.img` from [Radxa's U-Boot releases](https://github.com/radxa/u-boot/releases).
+
 ### 5. Boot and connect
 
 Insert the SD card and power on. Connect via:
